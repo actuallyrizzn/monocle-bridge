@@ -48,6 +48,13 @@ python3 monocle-cli.py repl "print('hello')"
 echo "import display; display.text('hi')" | python3 monocle-cli.py repl
 ```
 
+## Testing
+
+```bash
+pytest tests/ -v
+pytest tests/ --cov=. --cov-fail-under=80
+```
+
 ## Requirements
 
 - proot shares network with Android host (127.0.0.1 reaches the phone)

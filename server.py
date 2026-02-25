@@ -23,7 +23,7 @@ bridge_ws = None
 cli_ws = None
 
 
-async def relay(websocket, path):
+async def relay(websocket, path=None):
     global bridge_ws, cli_ws
     role = None
 
@@ -44,7 +44,7 @@ async def relay(websocket, path):
 
             # Relay: forward to the other client
             other = cli_ws if websocket == bridge_ws else bridge_ws
-            if other and other.open:
+            if other and getattr(other, "open", True):
                 await other.send(message)
     except Exception:
         pass
