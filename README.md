@@ -2,6 +2,8 @@
 
 Bridges the proot CLI environment to the Brilliant Monocle via Web Bluetooth.
 
+*Documentation: CC BY-SA 4.0. Code: AGPLv3. See [LICENSE](LICENSE) and [LICENSE.markdown](LICENSE.markdown).*
+
 ## How it works
 
 ```

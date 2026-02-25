@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# monocle-bridge - Bridge for Brilliant Monocle (proot CLI → Web Bluetooth)
+# Copyright (C) 2025 actuallyrizzn
 """
 Monocle CLI - connect to Monocle via the bridge (Chrome + Web Bluetooth).
 Requires: bridge server running, bridge.html open in Chrome on same device.

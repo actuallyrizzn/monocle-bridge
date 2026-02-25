@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# monocle-bridge - Bridge for Brilliant Monocle (proot CLI → Web Bluetooth)
+# Copyright (C) 2025 actuallyrizzn
 """
 Monocle Bridge Server - relays between CLI (proot) and Web Bluetooth (Chrome).
 Run in proot. Then open http://127.0.0.1:8765 in Chrome on the same Android device.
