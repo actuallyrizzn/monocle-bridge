@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Monocle Bridge</title>
+  <style>
+    body { font-family: system-ui; padding: 1rem; max-width: 480px; margin: 0 auto; }
+    .status { padding: 0.5rem; border-radius: 4px; margin: 0.5rem 0; }
+    .ok { background: #cfc; }
+    .err { background: #fcc; }
+    .pending { background: #ffc; }
+    button { padding: 0.5rem 1rem; margin: 0.25rem; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <h1>Monocle Bridge</h1>
+  <p>Bridges Web Bluetooth (Chrome) to proot CLI. Keep this page open.</p>
+  <div id="status" class="status pending">Connecting to bridge server...</div>
+  <button id="connectBtn" disabled>Connect to Monocle</button>
+  <pre id="log" style="font-size:0.8em; max-height:200px; overflow:auto;"></pre>
+
+  <script>
+    const REPL_SERVICE = '6e400001-b5a3-f393-e0a9-e50e24dcca9e';
+    const REPL_RX = '6e400002-b5a3-f393-e0a9-e50e24dcca9e';
+    const REPL_TX = '6e400003-b5a3-f393-e0a9-e50e24dcca9e';
+
+    let ws = null;
+    let device = null;
+    let server = null;
+    let replRx = null;
+    let replTx = null;
+    let replBuffer = '';
+    let replResolve = null;
+
+    function log(msg) {
+      const el = document.getElementById('log');
+      el.textContent += new Date().toLocaleTimeString() + ' ' + msg + '\n';
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setStatus(msg, cls) {
+      const el = document.getElementById('status');
+      el.textContent = msg;
+      el.className = 'status ' + (cls || 'pending');
+    }
+
+    function connectWebSocket() {
+      const host = location.hostname || '127.0.0.1';
+      const port = location.port ? parseInt(location.port) + 1 : 8766;
+      ws = new WebSocket('ws://' + host + ':' + port);
+      ws.onopen = () => {
+        ws.send(JSON.stringify({ role: 'bridge' }));
+      };
+      ws.onmessage = async (ev) => {
+        const msg = JSON.parse(ev.data);
+        if (msg.type === 'registered') {
+          setStatus('Bridge ready. Click "Connect to Monocle" when ready.', 'ok');
+          document.getElementById('connectBtn').disabled = false;
+          return;
+        }
+        if (msg.type === 'connect') {
+          await doConnectBLE();
+          ws.send(JSON.stringify({ type: 'connected', ok: !!device }));
+          return;
+        }
+        if (msg.type === 'repl' && msg.code !== undefined) {
+          const result = await sendRepl(msg.code);
+          ws.send(JSON.stringify({ type: 'repl_response', data: result }));
+        }
+      };
+      ws.onclose = () => {
+        setStatus('Bridge server disconnected. Restart server in proot.', 'err');
+      };
+      ws.onerror = (e) => {
+        log('WS error: ' + e);
+      };
+    }
+
+    async function doConnectBLE() {
+      try {
+        device = await navigator.bluetooth.requestDevice({
+          filters: [{ services: [REPL_SERVICE] }],
+          optionalServices: [REPL_SERVICE]
+        });
+        log('Device selected: ' + device.name);
+        server = await device.gatt.connect();
+        const svc = await server.getPrimaryService(REPL_SERVICE);
+        replRx = await svc.getCharacteristic(REPL_RX);
+        replTx = await svc.getCharacteristic(REPL_TX);
+        await replTx.startNotifications();
+        replTx.addEventListener('characteristicvaluechanged', (ev) => {
+          const val = ev.target.value;
+          const decoder = new TextDecoder();
+          replBuffer += decoder.decode(val);
+          if (replResolve && replBuffer.includes('\r\n')) {
+            replResolve(replBuffer);
+            replBuffer = '';
+            replResolve = null;
+          }
+        });
+        setStatus('Connected to Monocle', 'ok');
+        log('Monocle connected');
+      } catch (e) {
+        log('BLE error: ' + e.message);
+        setStatus('BLE error: ' + e.message, 'err');
+      }
+    }
+
+    function sendRepl(code) {
+      return new Promise(async (resolve) => {
+        if (!replRx || !replTx) {
+          resolve('ERROR: Not connected to Monocle');
+          return;
+        }
+        replBuffer = '';
+        replResolve = null;
+        const timeout = setTimeout(() => {
+          if (replResolve) {
+            replResolve(replBuffer || '(timeout)');
+            replResolve = null;
+          }
+        }, 5000);
+        replResolve = (data) => {
+          clearTimeout(timeout);
+          resolve(data.trim());
+        };
+        const encoder = new TextEncoder();
+        const toSend = (code.endsWith('\n') ? code : code + '\n');
+        await replRx.writeValue(encoder.encode(toSend));
+      });
+    }
+
+    document.getElementById('connectBtn').onclick = async () => {
+      await doConnectBLE();
+      if (device) ws.send(JSON.stringify({ type: 'connected', ok: true }));
+    };
+
+    connectWebSocket();
+  </script>
+</body>
+</html>
