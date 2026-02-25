@@ -1,6 +1,8 @@
 # Monocle Bridge
 
-Bridges the proot CLI environment to the Brilliant Monocle via Web Bluetooth.
+Bridges the proot CLI environment to the [Brilliant Monocle](https://docs.brilliant.xyz/monocle/monocle/) via Web Bluetooth so you can run MicroPython from the command line.
+
+**Full documentation:** [docs/](docs/README.md) — architecture, setup, usage, API, development, troubleshooting.
 
 *Documentation: CC BY-SA 4.0. Code: AGPLv3. See [LICENSE](LICENSE) and [LICENSE.markdown](LICENSE.markdown).*
 
